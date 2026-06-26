@@ -245,16 +245,16 @@ Malicious training data corrupts QA decision logic
 
 ## Roadmap
 
-| Phase | Component | Status | Timeline |
-|-------|-----------|--------|----------|
-| **MVP** | LLM01 Detector | ✅ Done | Week 1 |
-| **MVP** | Tests + Fixtures | ✅ Done | Week 1 |
-| **v0.2** | LLM02 Validator | 🚧 In Progress | Week 2-3 |
-| **v0.2** | LLM03 Detector | 🚧 In Progress | Week 2-3 |
-| **v0.3** | LLM09 Validator | 📋 Planned | Week 3-4 |
-| **v0.3** | MITRE ATLAS Mapping | 📋 Planned | Week 3-4 |
-| **v1.0** | Full OWASP Coverage | 📋 Planned | Week 5-6 |
-| **v1.0** | Guardrails Integration | 📋 Planned | Week 5-6 |
+| Phase | Component | Status 
+|-------|-----------|--------|
+| **MVP** | LLM01 Detector | Done |
+| **MVP** | Tests + Fixtures | Done |
+| **v0.2** | LLM02 Validator | In Progress |
+| **v0.2** | LLM03 Detector | In Progress |
+| **v0.3** | LLM09 Validator | Planned |
+| **v0.3** | MITRE ATLAS Mapping | Planned |
+| **v1.0** | Full OWASP Coverage | Planned |
+| **v1.0** | Guardrails Integration | Planned |
 
 ---
 
