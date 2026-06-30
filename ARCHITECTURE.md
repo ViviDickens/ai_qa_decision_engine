@@ -183,13 +183,13 @@ Leverage [Guardrails AI](https://docs.getguardrails.ai/) for:
 
 ## Roadmap & Priorities
 
-### Phase 1 (Week 1-2) ✅
-- [x] LLM01 Prompt Injection detector
+### Phase 1 (Week 1-2) 
+- [x] LLM01 Prompt Injectin detector
 - [x] API endpoint
 - [x] Basic tests
 - [x] README & setup
 
-### Phase 2 (Week 2-3) 🚧
+### Phase 2 (Week 2-3) 
 - [ ] LLM02 Insecure Output validator
 - [ ] LLM03 Data Poisoning detector
 - [ ] Expanded test fixtures
