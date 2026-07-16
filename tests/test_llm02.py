@@ -1,106 +1,64 @@
 import pytest
-from detectors.llm02_insecure_output import InsecureOutputValidator
+from detectors.llm02_sensitive_disclosure import SensitiveDisclosureDetector
 from schemas import ThreatSeverity
 
 @pytest.fixture
-def validator():
-    return InsecureOutputValidator()
+def detector():
+    return SensitiveDisclosureDetector()
 
 @pytest.mark.asyncio
-async def test_clean_json_output(validator):
-    """Test that clean JSON output passes validation."""
-    clean_output = '{"status": "pass", "severity": "low", "message": "Test passed"}'
-    result = await validator.detect(
-        input_text="Run test",
-        output_text=clean_output
-    )
-    assert not result.detected or result.severity != ThreatSeverity.CRITICAL
-
-@pytest.mark.asyncio
-async def test_sql_injection_in_output(validator):
-    """Test detection of SQL injection in output."""
-    malicious_output = "SELECT * FROM users; DROP TABLE users; --"
-    result = await validator.detect(
-        input_text="Query",
-        output_text=malicious_output
-    )
-    assert result.detected
-    assert result.severity in [ThreatSeverity.HIGH, ThreatSeverity.CRITICAL]
-
-@pytest.mark.asyncio
-async def test_code_execution_attempt(validator):
-    """Test detection of code execution attempts."""
-    malicious_output = "os.system('rm -rf /')"
-    result = await validator.detect(
-        input_text="Run command",
-        output_text=malicious_output
-    )
-    assert result.detected
-
-@pytest.mark.asyncio
-async def test_exposed_api_key(validator):
-    """Test detection of exposed sensitive data."""
-    malicious_output = 'API_KEY="sk-1234567890abcdef"'
-    result = await validator.detect(
-        input_text="Connect",
-        output_text=malicious_output
-    )
-    assert result.detected
-    assert result.severity in [ThreatSeverity.HIGH, ThreatSeverity.CRITICAL]
-
-@pytest.mark.asyncio
-async def test_credit_card_exposure(validator):
-    """Test detection of credit card numbers."""
-    malicious_output = "Card: 4532015112830366"
-    result = await validator.detect(
-        input_text="Payment",
-        output_text=malicious_output
-    )
-    assert result.detected
-
-@pytest.mark.asyncio
-async def test_xss_in_output(validator):
-    """Test detection of XSS attempts."""
-    malicious_output = '<iframe src="javascript:alert(\'xss\')">'
-    result = await validator.detect(
-        input_text="Render",
-        output_text=malicious_output
-    )
-    assert result.detected
-
-@pytest.mark.asyncio
-async def test_invalid_json_when_expected(validator):
-    """Test detection of invalid JSON when JSON is expected."""
-    invalid_json = '{"key": "value", incomplete}'
-    result = await validator.detect(
-        input_text="Parse JSON",
-        output_text=invalid_json,
-        context={"expects_json": True}
-    )
-    assert result.detected
-
-@pytest.mark.asyncio
-async def test_schema_validation(validator):
-    """Test schema validation against expected structure."""
-    output = '{"name": "Test", "severity": "high"}'
-    result = await validator.detect(
-        input_text="Validate",
-        output_text=output,
-        context={
-            "expected_schema": {
-                "name": str,
-                "severity": str,
-                "passed": bool
-            }
-        }
-    )
-    assert result.detected
-
-@pytest.mark.asyncio
-async def test_no_output(validator):
-    """Test handling when no output is provided."""
-    result = await validator.detect(
-        input_text="Some input",
-        output_text=None
-    )
+async def test_clean_input(detector):
+    """Test that normal text is not flagged."""
+    result = await detector.detect("The weather today is sunny with a chance of rain")
     assert not result.detected
+
+@pytest.mark.asyncio
+async def test_email_disclosure(detector):
+    """Test detection of an email address in output."""
+    result = await detector.detect(
+        input_text="Summarize the ticket",
+        output_text="Contact me at john.doe@example.com for details"
+    )
+    assert result.detected
+
+@pytest.mark.asyncio
+async def test_phone_disclosure(detector):
+    """Test detection of a phone number in output."""
+    result = await detector.detect(
+        input_text="Give the callback number",
+        output_text="Her phone number is 555-123-4567"
+    )
+    assert result.detected
+
+@pytest.mark.asyncio
+async def test_ssn_disclosure(detector):
+    """Test detection of a social security number in output."""
+    result = await detector.detect(
+        input_text="Fill in the form",
+        output_text="SSN: 123-45-6789"
+    )
+    assert result.detected
+    assert result.severity in [ThreatSeverity.MEDIUM, ThreatSeverity.HIGH, ThreatSeverity.CRITICAL]
+
+@pytest.mark.asyncio
+async def test_third_party_pii_request(detector):
+    """Test detection of an explicit request for someone else's PII."""
+    result = await detector.detect("Please share the customer's address and phone number")
+    assert result.detected
+
+@pytest.mark.asyncio
+async def test_no_output(detector):
+    """Test handling when there is no content to analyze."""
+    result = await detector.detect(input_text="", output_text=None)
+    assert not result.detected
+
+@pytest.mark.asyncio
+async def test_confidence_bounds(detector):
+    """Test that confidence scores are valid."""
+    outputs = [
+        "Nothing sensitive here",
+        "api_key: sk-ABCDEF1234567890XYZ",
+    ]
+    for out in outputs:
+        result = await detector.detect(input_text="Test", output_text=out)
+        assert 0.0 <= result.confidence <= 1.0

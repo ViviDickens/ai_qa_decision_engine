@@ -1,8 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from schemas import ValidationRequest, ValidationResponse
+from schemas import ValidationRequest, ValidationResponse, THREAT_NAMES
 from engine import qa_engine
 from config import config
+from mitre_atlas import get_atlas_mapping, all_mapped_threats
 import logging
 
 # Setup logging
@@ -88,11 +89,34 @@ async def validate(request: ValidationRequest) -> ValidationResponse:
 
 @app.get("/detectors", tags=["info"])
 async def list_detectors():
-    """List all available detectors."""
+    """List all available detectors, with their official OWASP Top 10 (2025) name."""
+    codes = list(qa_engine.detectors.keys())
     return {
-        "detectors": list(qa_engine.detectors.keys()),
-        "count": len(qa_engine.detectors)
+        "detectors": [
+            {"code": code, "name": THREAT_NAMES.get(code, "Unknown")}
+            for code in codes
+        ],
+        "count": len(codes)
     }
+
+@app.get("/mitre-atlas", tags=["info"])
+async def list_mitre_atlas_mappings():
+    """List OWASP threats that currently have a MITRE ATLAS technique mapping."""
+    return {
+        "mapped_threats": all_mapped_threats(),
+        "note": "Only threats with a verified, real ATLAS technique are listed here."
+    }
+
+@app.get("/mitre-atlas/{threat_id}", tags=["info"])
+async def get_mitre_atlas_mapping(threat_id: str):
+    """Get the MITRE ATLAS technique(s) mapped to a given OWASP threat ID (e.g. LLM01)."""
+    mapping = get_atlas_mapping(threat_id)
+    if not mapping:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No MITRE ATLAS mapping available for '{threat_id}'"
+        )
+    return {"threat_id": threat_id.upper(), "atlas_techniques": mapping}
 
 if __name__ == "__main__":
     import uvicorn

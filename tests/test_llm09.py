@@ -1,10 +1,10 @@
 import pytest
-from detectors.llm09_overreliance import OverrelianceValidator
+from detectors.llm09_misinformation import MisinformationDetector
 from schemas import ThreatSeverity
 
 @pytest.fixture
 def validator():
-    return OverrelianceValidator()
+    return MisinformationDetector()
 
 @pytest.mark.asyncio
 async def test_confident_complete_context(validator):
@@ -110,7 +110,7 @@ async def test_confidence_bounds(validator):
         "I'm uncertain about the outcome",
         "Missing critical information but assuming it will pass",
     ]
-    
+
     for out in outputs:
         result = await validator.detect(
             input_text="Test",

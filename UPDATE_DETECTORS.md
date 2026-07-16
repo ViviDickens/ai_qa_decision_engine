@@ -1,3 +1,8 @@
+> **Superseded (July 2026):** the LLM02/LLM03/LLM09 numbering and names below predate the
+> corrected mapping to the real OWASP Top 10 for LLM Applications (2025). See `README.md` and
+> `ARCHITECTURE.md` for the current, accurate category names and file layout. Keeping this file
+> as-is for historical record of the original MVP milestone.
+
 # Update: All 4 Detectors Implemented ✅
 
 **Date:** June 2, 2026  

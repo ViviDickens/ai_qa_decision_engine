@@ -5,17 +5,17 @@ from schemas import OWASPThreat, ThreatSeverity, DetectionResult
 
 class DataPoisoningDetector(BaseDetector):
     """
-    Detects LLM03: Training Data Poisoning / Input Poisoning.
-    
+    Detects LLM04: Data and Model Poisoning.
+
     Identifies attempts to corrupt QA decision signals, inject false labels,
     or manipulate training/inference data through malicious inputs.
     """
-    
+
     def __init__(self):
         super().__init__()
-        self.threat_id = OWASPThreat.LLM03_DATA_POISONING
-        self.threat_name = "Data Poisoning"
-        
+        self.threat_id = OWASPThreat.LLM04_DATA_MODEL_POISONING
+        self.threat_name = "Data and Model Poisoning"
+
         # Tier A: direct label/result manipulation (most severe - explicit falsification)
         self.critical_patterns = [
             r"(?i)\b(mark|label|flag)\b.{0,15}\bas\b\s*['\"]?(pass|fail|passed|failed|critical|safe|invalid|valid|bypass)\b",
@@ -31,7 +31,7 @@ class DataPoisoningDetector(BaseDetector):
             r"(?i)\b(add|inject|insert)\b.{0,40}\b(training|test)\s+data\b",
             r"(?i)\b(modify|alter|change)\b.{0,15}\b(test|training)\b.{0,15}\b(case|data|set)\b",
         ]
-    
+
     async def detect(
         self,
         input_text: str,
@@ -48,7 +48,7 @@ class DataPoisoningDetector(BaseDetector):
                 confidence=0.0,
                 description="Empty input"
             )
-        
+
         # Check for poisoning patterns - critical matches carry more weight
         # since they represent explicit instructions to falsify a result/label
         matches = []
@@ -80,7 +80,7 @@ class DataPoisoningDetector(BaseDetector):
 
         confidence = min(confidence, 1.0)
         detected = len(matches) > 0 or confidence > 0.5
-        
+
         # Determine severity
         if not detected:
             severity = ThreatSeverity.INFO
@@ -94,16 +94,16 @@ class DataPoisoningDetector(BaseDetector):
         else:
             severity = ThreatSeverity.MEDIUM
             description = "Potential data poisoning - review recommended"
-        
+
         evidence = None
         if matches:
             evidence = f"Matched patterns: {', '.join([p[:40] for p in matches[:2]])}"
-        
+
         recommendation = (
             "Validate input data schema, implement data sanitization, "
             "use content addressable storage for test data, monitor for unexpected labels"
         ) if detected else None
-        
+
         return self._create_result(
             detected=detected,
             severity=severity,

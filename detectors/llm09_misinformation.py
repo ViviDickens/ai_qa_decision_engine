@@ -3,19 +3,21 @@ from typing import Optional, Dict, Any
 from detectors.base import BaseDetector
 from schemas import OWASPThreat, ThreatSeverity, DetectionResult
 
-class OverrelianceValidator(BaseDetector):
+class MisinformationDetector(BaseDetector):
     """
-    Detects LLM09: Overreliance on LLM Output.
-    
-    Identifies decisions made on incomplete context, hallucination risks,
-    and situations where the LLM lacks sufficient information for reliable decisions.
+    Detects LLM09: Misinformation.
+
+    Identifies decisions made on incomplete context, hallucination risk
+    indicators, and situations where the model lacks sufficient information
+    for a reliable answer - the conditions under which an LLM is most likely
+    to state fabricated information with unwarranted confidence.
     """
-    
+
     def __init__(self):
         super().__init__()
-        self.threat_id = OWASPThreat.LLM09_OVERRELIANCE
-        self.threat_name = "Overreliance"
-        
+        self.threat_id = OWASPThreat.LLM09_MISINFORMATION
+        self.threat_name = "Misinformation"
+
         # Patterns indicating incomplete context
         self.incomplete_context_patterns = [
             r"(?i)(i\s+don't\s+know|not\s+sure|unclear|uncertain|ambiguous)",
@@ -33,7 +35,7 @@ class OverrelianceValidator(BaseDetector):
             r"(?i)assum\w*\s+.*?\bis\b\s+(true|correct|valid)",
             r"(?i)\b(should|will|would)\s+(work|pass|succeed|be\s+(?:fine|okay|ok))\b",
         ]
-    
+
     async def detect(
         self,
         input_text: str,
@@ -41,11 +43,11 @@ class OverrelianceValidator(BaseDetector):
         context: Optional[Dict[str, Any]] = None
     ) -> DetectionResult:
         """
-        Detect overreliance risks in LLM output.
+        Detect misinformation/hallucination risk in LLM output.
         """
         # Primary: analyze OUTPUT for hallucination/confidence indicators
         analysis_text = output_text or input_text
-        
+
         if not analysis_text:
             return self._create_result(
                 detected=False,
@@ -53,16 +55,16 @@ class OverrelianceValidator(BaseDetector):
                 confidence=0.0,
                 description="No output to analyze"
             )
-        
+
         confidence = 0.0
         issues = []
-        
+
         # Check 1: Incomplete context admission
         incomplete_matches = 0
         for pattern in self.incomplete_context_patterns:
             if re.search(pattern, analysis_text):
                 incomplete_matches += 1
-        
+
         if incomplete_matches > 0:
             confidence += incomplete_matches * 0.3
             issues.append(f"LLM admits uncertainty or incomplete knowledge ({incomplete_matches} indicators)")
@@ -98,33 +100,33 @@ class OverrelianceValidator(BaseDetector):
         if has_low_confidence and has_decisive_statements:
             confidence += 0.55
             issues.append("Claims low confidence but makes definitive statements (conflicting signals)")
-        
+
         confidence = min(confidence, 1.0)
         detected = confidence > 0.5
-        
+
         # Determine severity
         if not detected:
             severity = ThreatSeverity.INFO
             description = "Output shows appropriate confidence and context awareness"
         elif confidence >= 0.8:
             severity = ThreatSeverity.CRITICAL
-            description = "Critical overreliance risk - decision should not proceed"
+            description = "Critical misinformation risk - decision should not proceed"
         elif confidence >= 0.6:
             severity = ThreatSeverity.HIGH
             description = "High risk of hallucination or unreliable output"
         else:
             severity = ThreatSeverity.MEDIUM
-            description = "Moderate overreliance risk - manual review recommended"
-        
+            description = "Moderate misinformation risk - manual review recommended"
+
         evidence = None
         if issues:
             evidence = "; ".join(issues)
-        
+
         recommendation = (
             "Require human verification before execution, implement confidence thresholds, "
             "request explicit context validation, add fallback decision paths"
         ) if detected else None
-        
+
         return self._create_result(
             detected=detected,
             severity=severity,

@@ -11,17 +11,38 @@ class ThreatSeverity(str, Enum):
     INFO = "INFO"
 
 class OWASPThreat(str, Enum):
-    """OWASP LLM Top 10 (2025) threats."""
+    """
+    OWASP Top 10 for LLM Applications (2025).
+
+    Official list: https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    """
     LLM01_PROMPT_INJECTION = "LLM01"
-    LLM02_INSECURE_OUTPUT = "LLM02"
-    LLM03_DATA_POISONING = "LLM03"
-    LLM04_MODEL_DENIAL = "LLM04"
-    LLM05_SUPPLY_CHAIN = "LLM05"
-    LLM06_DISCLOSURE = "LLM06"
-    LLM07_CROSS_PLUGIN = "LLM07"
-    LLM08_EXCESSIVE_AGENCY = "LLM08"
-    LLM09_OVERRELIANCE = "LLM09"
-    LLM10_TRAINING_DATA = "LLM10"
+    LLM02_SENSITIVE_INFO_DISCLOSURE = "LLM02"
+    LLM03_SUPPLY_CHAIN = "LLM03"
+    LLM04_DATA_MODEL_POISONING = "LLM04"
+    LLM05_IMPROPER_OUTPUT_HANDLING = "LLM05"
+    LLM06_EXCESSIVE_AGENCY = "LLM06"
+    LLM07_SYSTEM_PROMPT_LEAKAGE = "LLM07"
+    LLM08_VECTOR_EMBEDDING_WEAKNESSES = "LLM08"
+    LLM09_MISINFORMATION = "LLM09"
+    LLM10_UNBOUNDED_CONSUMPTION = "LLM10"
+
+# Human-readable names for the official 2025 list, keyed by the enum's string
+# value (e.g. "LLM01"). Kept separate from the enum member names so API
+# responses can surface the real category name without relying on Python
+# identifier formatting.
+THREAT_NAMES: Dict[str, str] = {
+    "LLM01": "Prompt Injection",
+    "LLM02": "Sensitive Information Disclosure",
+    "LLM03": "Supply Chain",
+    "LLM04": "Data and Model Poisoning",
+    "LLM05": "Improper Output Handling",
+    "LLM06": "Excessive Agency",
+    "LLM07": "System Prompt Leakage",
+    "LLM08": "Vector and Embedding Weaknesses",
+    "LLM09": "Misinformation",
+    "LLM10": "Unbounded Consumption",
+}
 
 class DetectionResult(BaseModel):
     """Detection result for a single threat."""
