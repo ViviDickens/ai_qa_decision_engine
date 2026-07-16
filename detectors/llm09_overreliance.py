@@ -19,16 +19,19 @@ class OverrelianceValidator(BaseDetector):
         # Patterns indicating incomplete context
         self.incomplete_context_patterns = [
             r"(?i)(i\s+don't\s+know|not\s+sure|unclear|uncertain|ambiguous)",
-            r"(?i)(assume|guess|probably|likely|maybe|might be)",
+            r"(?i)(assum\w*|guess\w*|probably|likely|maybe|might\s+be)",
             r"(?i)(unknown|missing|incomplete|partial|lack)",
             r"(?i)(can't\s+determine|can't\s+verify|unconfirmed)",
+            r"(?i)(don't\s+have|do\s+not\s+have|lacking)\s+(?:all\s+)?(?:the\s+)?(requirements|information|details|context|data)",
         ]
-        
+
         # Patterns indicating risky decisions
         self.risky_decision_patterns = [
             r"(?i)(based\s+on|infer|deduce|extrapolate)\s+(only|just)\s+(this|that)",
+            r"(?i)\bbased\s+only\s+on\b",
             r"(?i)(without\s+checking|no\s+verification|no\s+confirmation)",
-            r"(?i)(assume\s+.*?is\s+(true|correct|valid))",
+            r"(?i)assum\w*\s+.*?\bis\b\s+(true|correct|valid)",
+            r"(?i)\b(should|will|would)\s+(work|pass|succeed|be\s+(?:fine|okay|ok))\b",
         ]
     
     async def detect(
@@ -61,41 +64,39 @@ class OverrelianceValidator(BaseDetector):
                 incomplete_matches += 1
         
         if incomplete_matches > 0:
-            confidence += incomplete_matches * 0.2
+            confidence += incomplete_matches * 0.3
             issues.append(f"LLM admits uncertainty or incomplete knowledge ({incomplete_matches} indicators)")
-        
+
         # Check 2: Risky decision making despite uncertainty
         risky_matches = 0
         for pattern in self.risky_decision_patterns:
             if re.search(pattern, analysis_text):
                 risky_matches += 1
-        
+
         if risky_matches > 0:
-            confidence += risky_matches * 0.25
+            confidence += risky_matches * 0.45
             issues.append(f"Making decisions despite limited context ({risky_matches} patterns)")
-        
+
         # Check 3: Context completeness from provided context
         if context:
             required_fields = context.get("required_context", [])
             available_fields = context.get("available_context", [])
-            
+
             missing = set(required_fields) - set(available_fields)
             if missing:
-                confidence += len(missing) * 0.15
+                confidence += len(missing) * 0.3
                 issues.append(f"Missing critical context: {', '.join(missing)}")
-        
-        # Check 4: Confidence level analysis
-        confidence_claims = re.findall(
-            r"(?i)(highly|very|extremely|somewhat|slightly|not)?\s*(confident|certain|sure)",
+
+        # Check 4: Confidence level analysis - output claims low confidence
+        # ("not sure/confident/certain") but still makes decisive statements
+        has_low_confidence = bool(re.search(
+            r"(?i)\bnot\s+(?:very\s+|that\s+|too\s+|really\s+)?(?:confident|certain|sure)\b",
             analysis_text
-        )
-        
-        # If output claims low confidence but makes decisive statements
-        low_confidence_claims = [c for c in confidence_claims if 'not' in str(c[0]).lower() or 'slightly' in str(c[0]).lower()]
+        ))
         has_decisive_statements = bool(re.search(r"(?i)(definitely|certainly|must|will|always|never)", analysis_text))
-        
-        if low_confidence_claims and has_decisive_statements:
-            confidence = min(confidence + 0.3, 1.0)
+
+        if has_low_confidence and has_decisive_statements:
+            confidence += 0.55
             issues.append("Claims low confidence but makes definitive statements (conflicting signals)")
         
         confidence = min(confidence, 1.0)

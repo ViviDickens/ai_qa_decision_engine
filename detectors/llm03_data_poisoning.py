@@ -16,23 +16,20 @@ class DataPoisoningDetector(BaseDetector):
         self.threat_id = OWASPThreat.LLM03_DATA_POISONING
         self.threat_name = "Data Poisoning"
         
-        # Patterns for data poisoning attempts
-        self.poisoning_patterns = [
-            # Label manipulation
-            r"(?i)(label|tag|category|classification)\s*(is|=|should be|marked as)\s*['\"]?(false|true|invalid|bypass)",
-            r"(?i)(mark|label|flag)\s+(this|it)\s+as\s+(pass|fail|critical|safe)",
-            
-            # Data corruption signals
-            r"(?i)(corrupt|poison|inject|manipulate)\s+(data|label|signal|decision)",
-            r"(?i)(force|make|ensure)\s+(it\s+)?(fails|passes|triggers|blocks)",
-            
-            # Ground truth override
-            r"(?i)(actual|expected|correct)\s+(result|output|label)\s+(is|should be|was)",
-            r"(?i)(ignore|override|replace)\s+(previous|actual)\s+(label|result)",
-            
-            # Test data contamination
-            r"(?i)(add|inject|insert)\s+(this|fake|malicious)\s+(into|to)\s+(test|training)\s+data",
-            r"(?i)(modify|alter|change)\s+(test|training)\s+(case|data|set)",
+        # Tier A: direct label/result manipulation (most severe - explicit falsification)
+        self.critical_patterns = [
+            r"(?i)\b(mark|label|flag)\b.{0,15}\bas\b\s*['\"]?(pass|fail|passed|failed|critical|safe|invalid|valid|bypass)\b",
+            r"(?i)[\"']?\b(label|tag|category|classification)\b[\"']?\s*(?:is|=|:|should be|marked as)\s*['\"]?\b(true|false|pass|fail|passed|failed|invalid|valid|bypass)\b",
+            r"(?i)\b(actual|expected|correct)\b.{0,25}\b(result|output|label)\b.{0,25}(?:\bis\b|\bwas\b|\bshould be\b|=)",
+            r"(?i)\b(ignore|override|replace)\b.{0,15}\b(previous|actual)\b.{0,15}\b(label|result)\b",
+        ]
+
+        # Tier B: supporting/corroborating signals of data corruption
+        self.supporting_patterns = [
+            r"(?i)\b(corrupt|poison|inject|manipulate)\b.{0,15}\b(data|label|signal|decision)\b",
+            r"(?i)\b(force|make|ensure)\b.{0,15}\b(fail(?:s|ed)?|pass(?:es|ed)?|trigger(?:s|ed)?|block(?:s|ed)?)\b",
+            r"(?i)\b(add|inject|insert)\b.{0,40}\b(training|test)\s+data\b",
+            r"(?i)\b(modify|alter|change)\b.{0,15}\b(test|training)\b.{0,15}\b(case|data|set)\b",
         ]
     
     async def detect(
@@ -52,27 +49,36 @@ class DataPoisoningDetector(BaseDetector):
                 description="Empty input"
             )
         
-        # Check for poisoning patterns
+        # Check for poisoning patterns - critical matches carry more weight
+        # since they represent explicit instructions to falsify a result/label
         matches = []
-        for pattern in self.poisoning_patterns:
+        confidence = 0.0
+
+        for pattern in self.critical_patterns:
             if re.search(pattern, input_text):
                 matches.append(pattern)
-        
-        # Analyze input characteristics
-        confidence = min(len(matches) * 0.3, 1.0)
-        
+                confidence += 0.65
+
+        for pattern in self.supporting_patterns:
+            if re.search(pattern, input_text):
+                matches.append(pattern)
+                confidence += 0.3
+
         # Check for data structure manipulation
         has_json_injection = bool(re.search(r'[{}":\[\],].*(?:label|class|tag)', input_text))
         has_sql_data = bool(re.search(r"(?i)(INSERT|UPDATE|VALUES|SET)", input_text))
-        
-        if has_json_injection or has_sql_data:
-            confidence = min(confidence + 0.25, 1.0)
-        
+
+        if has_json_injection:
+            confidence += 0.25
+        if has_sql_data:
+            confidence += 0.35
+
         # Check for unusual character patterns (encoding attempts)
         unicode_escapes = len(re.findall(r"\\u[0-9a-f]{4}", input_text, re.IGNORECASE))
         if unicode_escapes > 2:
-            confidence = min(confidence + 0.15, 1.0)
-        
+            confidence += 0.15
+
+        confidence = min(confidence, 1.0)
         detected = len(matches) > 0 or confidence > 0.5
         
         # Determine severity
