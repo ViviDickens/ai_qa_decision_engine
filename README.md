@@ -8,10 +8,10 @@
 
 A modular Python framework for detecting and evaluating security threats in LLM inputs and outputs, aligned with the **OWASP LLM Top 10 (2025)**.
 
-[![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python\&logoColor=white)]()
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104%2B-009688?logo=fastapi\&logoColor=white)]()
-[![Pytest](https://img.shields.io/badge/Pytest-Tested-0A9EDC?logo=pytest\&logoColor=white)]()
-[![License](https://img.shields.io/badge/License-MIT-yellow)]()
+[![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python\&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104%2B-009688?logo=fastapi\&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Pytest](https://img.shields.io/badge/Pytest-Tested-0A9EDC?logo=pytest\&logoColor=white)](https://docs.pytest.org/)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 </div>
 
